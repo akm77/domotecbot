@@ -7,9 +7,10 @@ from tgbot.models.db_commands import upsert_user_from_middleware
 
 
 class ConfigMiddleware(BaseMiddleware):
-    def __init__(self, config, db_session) -> None:
+    def __init__(self, config, db_session, transcriber) -> None:
         self.config = config
         self.db_session = db_session
+        self.transcriber = transcriber
 
     async def __call__(
             self,
@@ -19,6 +20,7 @@ class ConfigMiddleware(BaseMiddleware):
     ) -> Any:
         data["config"] = self.config
         data["db_session"] = self.db_session
+        data["transcriber"] = self.transcriber
         return await handler(event, data)
 
 

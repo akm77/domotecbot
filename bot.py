@@ -9,10 +9,12 @@ from aiogram_dialog.widgets.text import setup_jinja
 from tgbot.config import settings
 from tgbot.dialogs import setup_dialogs
 from tgbot.handlers.admin import admin_router
+from tgbot.handlers.sound_to_text import sound_router
 from tgbot.handlers.user import user_router
 from tgbot.middlewares.config import ConfigMiddleware, UserDBMiddleware
 from tgbot.models.base import create_db_session
 from tgbot.services import broadcaster
+from tgbot.services.vosk import Transcriber
 from tgbot.utils.decimals import formatvalue
 
 logger = logging.getLogger(__name__)
@@ -22,11 +24,11 @@ async def on_startup(bot: Bot, admin_ids: list[int]):
     await broadcaster.broadcast(bot, admin_ids, "Bot started")
 
 
-def register_global_middlewares(dp: Dispatcher, config, db_session):
-    dp.my_chat_member.outer_middleware(ConfigMiddleware(config, db_session))
-    dp.message.outer_middleware(ConfigMiddleware(config, db_session))
+def register_global_middlewares(dp: Dispatcher, config, db_session, transcriber: Transcriber):
+    dp.my_chat_member.outer_middleware(ConfigMiddleware(config, db_session, transcriber))
+    dp.message.outer_middleware(ConfigMiddleware(config, db_session, transcriber))
     dp.message.outer_middleware(UserDBMiddleware())
-    dp.callback_query.outer_middleware(ConfigMiddleware(config, db_session))
+    dp.callback_query.outer_middleware(ConfigMiddleware(config, db_session, transcriber))
     dp.callback_query.outer_middleware(UserDBMiddleware())
 
 
@@ -54,10 +56,11 @@ async def main():
     for router in [
         admin_router,
         user_router,
+        sound_router
     ]:
         dp.include_router(router)
-
-    register_global_middlewares(dp, config, db_session)
+    stt = Transcriber(model_name=config.vosk_model, lang=config.vosk_language)
+    register_global_middlewares(dp, config, db_session, stt)
     await on_startup(bot, config.admins)
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 

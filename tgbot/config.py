@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     db_name: str
     db_echo: bool
 
+    vosk_model: str
+    vosk_language: str
     class Config:
         @classmethod
         def parse_env_var(cls, field_name: str, raw_val: str) -> Any:
